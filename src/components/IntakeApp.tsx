@@ -157,7 +157,7 @@ function Onboarding({ onComplete }: { onComplete: (s: Settings) => void }) {
     weight: 151,
     activity: 'moderate',
     goal: 'recomp',
-    proteinPerKg: 1.9,
+    proteinPerKg: 2.2,
   });
 
   const next = () => {
@@ -284,7 +284,7 @@ function Onboarding({ onComplete }: { onComplete: (s: Settings) => void }) {
       content: (
         <div className="space-y-3">
           {GOALS.map((opt) => (
-            <button key={opt.id} onClick={() => setData({ ...data, goal: opt.id })} className={`w-full text-left p-4 border-2 rounded-sm transition-all ${data.goal === opt.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 hover:border-stone-500'}`}>
+            <button key={opt.id} onClick={() => setData({ ...data, goal: opt.id, proteinPerKg: opt.proteinPerKg })} className={`w-full text-left p-4 border-2 rounded-sm transition-all ${data.goal === opt.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 hover:border-stone-500'}`}>
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-semibold text-sm">{opt.label}</div>
@@ -1326,7 +1326,7 @@ function SettingsView({
         <h2 className="text-xs uppercase tracking-widest font-semibold text-stone-700 mb-3">Goal</h2>
         <div className="grid grid-cols-2 gap-2">
           {GOALS.map((g) => (
-            <button key={g.id} onClick={() => update('goal', g.id)} className={`p-3 border-2 rounded-sm text-left transition-colors ${draft.goal === g.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300'}`}>
+            <button key={g.id} onClick={() => setDraft(recalculate({ ...draft, goal: g.id, protein_per_kg: g.proteinPerKg }))} className={`p-3 border-2 rounded-sm text-left transition-colors ${draft.goal === g.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300'}`}>
               <div className="text-sm font-semibold">{g.label}</div>
               <div className={`text-xs ${draft.goal === g.id ? 'text-stone-300' : 'text-stone-500'}`}>
                 {g.adjustment > 0 ? '+' : ''}{g.adjustment} cal

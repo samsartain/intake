@@ -82,9 +82,9 @@ export const MEAL_CATEGORIES = [
 ];
 
 export const GOALS = [
-  { id: 'cut', label: 'Cut', adjustment: -400, desc: 'Lose fat, preserve muscle' },
-  { id: 'recomp', label: 'Recomp', adjustment: 0, desc: 'Slow body composition change' },
-  { id: 'lean_bulk', label: 'Lean Bulk', adjustment: 250, desc: 'Slow muscle gain' },
-  { id: 'bulk', label: 'Bulk', adjustment: 500, desc: 'Aggressive muscle gain' },
-  { id: 'maintain', label: 'Maintain', adjustment: 0, desc: 'Hold weight steady' },
+  { id: 'cut', label: 'Cut', adjustment: -400, proteinPerKg: 2.2, desc: 'Lose fat, preserve muscle' },
+  { id: 'recomp', label: 'Recomp', adjustment: -100, proteinPerKg: 2.2, desc: 'Slow body composition change' },
+  { id: 'maintain', label: 'Maintain', adjustment: 0, proteinPerKg: 1.8, desc: 'Hold weight steady' },
+  { id: 'lean_bulk', label: 'Lean Bulk', adjustment: 250, proteinPerKg: 2.0, desc: 'Slow muscle gain' },
+  { id: 'bulk', label: 'Bulk', adjustment: 500, proteinPerKg: 1.8, desc: 'Aggressive muscle gain' },
 ];
