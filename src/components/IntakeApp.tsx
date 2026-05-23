@@ -215,6 +215,19 @@ function Onboarding({ onComplete }: { onComplete: (s: Settings) => void }) {
       content: (
         <div className="space-y-5">
           <div>
+            <label className="block text-xs uppercase tracking-widest text-stone-600 mb-2">Sex</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'male', label: 'Male' },
+                { id: 'female', label: 'Female' },
+              ].map((opt) => (
+                <button key={opt.id} type="button" onClick={() => setData({ ...data, sex: opt.id })} className={`py-3 border-2 rounded-sm text-sm font-semibold transition-all ${data.sex === opt.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 hover:border-stone-500'}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             <label className="block text-xs uppercase tracking-widest text-stone-600 mb-2">Age</label>
             <input type="number" value={data.age} onChange={(e) => setData({ ...data, age: Number(e.target.value) })} className="w-full px-3 py-3 border border-stone-300 rounded-sm focus:border-stone-900 outline-none" />
           </div>
@@ -1291,6 +1304,19 @@ function SettingsView({
 
       <section className="space-y-4 mb-6">
         <h2 className="text-xs uppercase tracking-widest font-semibold text-stone-700">Stats</h2>
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-stone-600 mb-2">Sex</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'male', label: 'Male' },
+              { id: 'female', label: 'Female' },
+            ].map((opt) => (
+              <button key={opt.id} type="button" onClick={() => update('sex', opt.id)} className={`py-3 border-2 rounded-sm text-sm font-semibold transition-all ${draft.sex === opt.id ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 hover:border-stone-500'}`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <Field label="Age" type="number" value={draft.age} onChange={(v) => update('age', Number(v))} />
         <Field label="Weight (lbs)" type="number" value={draft.weight} onChange={(v) => update('weight', Number(v))} />
         <Field label="Height (inches)" type="number" value={draft.height_in} onChange={(v) => update('height_in', Number(v))} />
