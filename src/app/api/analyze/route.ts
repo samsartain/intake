@@ -25,12 +25,14 @@ Method:
 2. If a quantity or size is given, use it. If not, assume one typical serving and reflect that in the item name.
 3. Treat distinct foods as separate items (e.g. "burger and fries" → two items).
 4. Be realistic; err slightly high on calorie-dense items (oils, cheese, bread, nut butters, dressings, sauces).
-5. Keep each item internally consistent: calories should be approximately 4*protein + 4*carbs + 9*fat (within ~15%).
+5. For generic/home-cooked items only, keep them internally consistent: calories should be approximately 4*protein + 4*carbs + 9*fat (within ~15%). For brand/restaurant items, prefer the brand's actual published numbers even if they don't perfectly match this formula.
+
+For each item set "branded" to true ONLY when it is from an identifiable restaurant or packaged brand and you are reporting that brand's published nutrition; otherwise false.
 
 Round protein, carbs, and fat to whole grams, and calories to the nearest 5. In each item's name, include the brand and size when known.
 
 Respond with ONLY a JSON object — no prose, no markdown fences:
-{"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number}]}
+{"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number,"branded":boolean}]}
 
 If the text does not describe any food or drink, respond exactly with: {"items":[]}`;
     } else if (type === 'food') {
@@ -40,12 +42,14 @@ Method:
 1. If an item is from an identifiable restaurant or packaged brand (e.g. McDonald's, Chipotle, a labeled product), use that brand's known published nutrition for the size shown, then scale to the visible portion.
 2. For generic or home-cooked food, estimate the real visible portion (not a generic "serving size"). Judge size using the plate, utensils, hands, or packaging for scale.
 3. Be realistic; err slightly high on calorie-dense items (oils, cheese, bread, nut butters, dressings, sauces).
-4. Keep each item internally consistent: calories should be approximately 4*protein + 4*carbs + 9*fat (within ~15%).
+4. For generic/home-cooked items only, keep them internally consistent: calories should be approximately 4*protein + 4*carbs + 9*fat (within ~15%). For brand/restaurant items, prefer the brand's actual published numbers even if they don't perfectly match this formula.
+
+For each item set "branded" to true ONLY when it is from an identifiable restaurant or packaged brand and you are reporting that brand's published nutrition; otherwise false.
 
 Round protein, carbs, and fat to whole grams, and calories to the nearest 5. In each item's name, include the brand and size when known.
 
 Respond with ONLY a JSON object — no prose, no markdown fences:
-{"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number}]}
+{"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number,"branded":boolean}]}
 
 If no food is visible, respond exactly with: {"items":[]}`;
     } else if (type === 'workout') {
@@ -113,6 +117,12 @@ If you can't identify a workout: {"type": "Unknown", "duration_minutes": 0, "cal
         const f = Number(it.fat) || 0;
         const cal = Number(it.calories) || 0;
         const fromMacros = 4 * p + 4 * c + 9 * f;
+        // Skip the 4/4/9 snap for branded items: trust the brand's published
+        // numbers, which legitimately diverge from the macro formula (fiber,
+        // sugar alcohols, label rounding). Still snap if calories are missing.
+        if (it.branded && cal > 0) {
+          return it;
+        }
         if (fromMacros > 0 && (cal === 0 || Math.abs(cal - fromMacros) / fromMacros > 0.25)) {
           return { ...it, calories: Math.round(fromMacros / 5) * 5 };
         }
