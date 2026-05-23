@@ -80,9 +80,8 @@ input[type=number] {
 }
 
 @keyframes welcomeInOut {
-  0% { opacity: 0; }
-  14% { opacity: 1; }
-  80% { opacity: 1; }
+  0% { opacity: 1; }
+  72% { opacity: 1; }
   100% { opacity: 0; }
 }
 
