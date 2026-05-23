@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Camera, Plus, Trash2, Loader2, Check, X, Settings as SettingsIcon, TrendingUp,
-  Dumbbell, Scale, ChevronLeft, ChevronRight, Target, LogOut,
+  Dumbbell, Scale, ChevronLeft, ChevronRight, Target, LogOut, Search,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import * as storage from '@/lib/storage';
@@ -307,6 +307,7 @@ function TodayView({
   const [analyzing, setAnalyzing] = useState(false);
   const [pendingItems, setPendingItems] = useState<any[] | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [showWeight, setShowWeight] = useState(false);
   const [activeMeal, setActiveMeal] = useState('breakfast');
   const [error, setError] = useState('');
@@ -371,6 +372,42 @@ function TodayView({
     }
   };
 
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) return;
+    setAnalyzing(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, type: 'search' }),
+      });
+
+      if (!response.ok) throw new Error(`API ${response.status}`);
+      const parsed = await response.json();
+
+      if (!parsed.items || parsed.items.length === 0) {
+        setError("Couldn't find that. Try rephrasing, or use manual entry.");
+        setAnalyzing(false);
+        return;
+      }
+
+      setShowSearch(false);
+      setPendingItems(
+        parsed.items.map((item: any, i: number) => ({
+          ...item,
+          tempId: `pending-${Date.now()}-${i}`,
+          meal: activeMeal,
+        }))
+      );
+    } catch (err: any) {
+      setError(`Search failed: ${err.message}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const confirmPending = async () => {
     if (!pendingItems) return;
     await storage.addFoodEntries(
@@ -393,12 +430,14 @@ function TodayView({
     onReload();
   };
 
-  const addManualEntry = async (entry: any) => {
-    await storage.addFoodEntry({
-      log_date: dateKey(date),
-      meal: activeMeal,
-      ...entry,
-    });
+  const addManualEntries = async (items: any[]) => {
+    await storage.addFoodEntries(
+      items.map((entry) => ({
+        log_date: dateKey(date),
+        meal: activeMeal,
+        ...entry,
+      }))
+    );
     setShowManual(false);
     onReload();
   };
@@ -502,7 +541,16 @@ function TodayView({
         />
       )}
 
-      {showManual && <ManualEntryCard onAdd={addManualEntry} onCancel={() => setShowManual(false)} meal={activeMeal} />}
+      {showManual && <ManualEntryCard onAddMany={addManualEntries} onCancel={() => setShowManual(false)} meal={activeMeal} />}
+
+      {showSearch && (
+        <SearchCard
+          onSearch={handleSearch}
+          onCancel={() => setShowSearch(false)}
+          analyzing={analyzing}
+          meal={activeMeal}
+        />
+      )}
 
       {showWeight && (
         <WeightEntryCard
@@ -512,7 +560,7 @@ function TodayView({
         />
       )}
 
-      {!pendingItems && !showManual && !showWeight && (
+      {!pendingItems && !showManual && !showSearch && !showWeight && (
         <>
           <div className="mb-4">
             <div className="flex gap-1 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
@@ -532,9 +580,12 @@ function TodayView({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-6">
             <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} className="bg-stone-900 text-stone-50 py-4 text-xs uppercase tracking-widest font-semibold hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 rounded-sm">
-              {analyzing ? <><Loader2 size={16} className="animate-spin" /> Analyzing</> : <><Camera size={16} /> Photo</>}
+              {analyzing ? <><Loader2 size={16} className="animate-spin" /></> : <><Camera size={16} /> Photo</>}
+            </button>
+            <button onClick={() => setShowSearch(true)} className="border-2 border-stone-900 text-stone-900 py-4 text-xs uppercase tracking-widest font-semibold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2 rounded-sm">
+              <Search size={16} /> Search
             </button>
             <button onClick={() => setShowManual(true)} className="border-2 border-stone-900 text-stone-900 py-4 text-xs uppercase tracking-widest font-semibold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2 rounded-sm">
               <Plus size={16} /> Manual
@@ -564,7 +615,7 @@ function TodayView({
           );
         })}
 
-        {entries.length === 0 && !pendingItems && !showManual && (
+        {entries.length === 0 && !pendingItems && !showManual && !showSearch && (
           <div className="text-center py-12 text-stone-400 border border-dashed border-stone-300 rounded-sm">
             <p className="text-sm">Nothing logged for {formatDate(date).toLowerCase()}.</p>
             <p className="text-xs mt-1 text-stone-500">Snap a photo or add manually.</p>
@@ -667,32 +718,98 @@ function PendingItemsCard({ items, setItems, onConfirm, onCancel }: any) {
   );
 }
 
-function ManualEntryCard({ onAdd, onCancel, meal }: { onAdd: (e: any) => void; onCancel: () => void; meal: string }) {
-  const [entry, setEntry] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' });
+function SearchCard({
+  onSearch, onCancel, analyzing, meal,
+}: {
+  onSearch: (q: string) => void;
+  onCancel: () => void;
+  analyzing: boolean;
+  meal: string;
+}) {
+  const [query, setQuery] = useState('');
+  return (
+    <div className="mb-6 border-2 border-stone-900 p-4 rounded-sm">
+      <h2 className="text-xs uppercase tracking-widest font-semibold mb-3">Search → {meal.replace('_', ' ')}</h2>
+      <p className="text-xs text-stone-600 mb-3">
+        Describe what you ate — include brand, size, or quantity for the best estimate (e.g. &quot;large McDonald&apos;s fries and a 9pc nuggets&quot;).
+      </p>
+      <input
+        type="text"
+        autoFocus
+        placeholder="e.g. 2 eggs and a slice of sourdough"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !analyzing && query.trim()) onSearch(query); }}
+        className="w-full px-3 py-2 border border-stone-300 rounded-sm focus:border-stone-900 outline-none text-sm mb-3"
+      />
+      <div className="flex gap-2">
+        <button onClick={() => onSearch(query)} disabled={analyzing || !query.trim()} className="flex-1 bg-stone-900 text-stone-50 py-2 text-xs uppercase tracking-widest font-semibold disabled:opacity-40 flex items-center justify-center gap-2">
+          {analyzing ? <><Loader2 size={14} className="animate-spin" /> Searching</> : <><Search size={14} /> Search</>}
+        </button>
+        <button onClick={onCancel} disabled={analyzing} className="px-4 py-2 border border-stone-900 text-xs uppercase tracking-widest font-semibold disabled:opacity-40">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function ManualEntryCard({ onAddMany, onCancel, meal }: { onAddMany: (entries: any[]) => void; onCancel: () => void; meal: string }) {
+  const blank = () => ({
+    tempId: `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: '', calories: '', protein: '', carbs: '', fat: '',
+  });
+  const [items, setItems] = useState<any[]>([blank()]);
+
+  const update = (tempId: string, field: string, value: string) =>
+    setItems(items.map((it) => (it.tempId === tempId ? { ...it, [field]: value } : it)));
+  const addRow = () => setItems([...items, blank()]);
+  const removeRow = (tempId: string) =>
+    setItems(items.length > 1 ? items.filter((it) => it.tempId !== tempId) : items);
+
+  const valid = items.filter((it) => it.name.trim() && it.calories !== '');
+
   const submit = () => {
-    if (!entry.name.trim() || !entry.calories) return;
-    onAdd({
-      name: entry.name,
-      calories: Number(entry.calories) || 0,
-      protein: Number(entry.protein) || 0,
-      carbs: Number(entry.carbs) || 0,
-      fat: Number(entry.fat) || 0,
-    });
+    if (valid.length === 0) return;
+    onAddMany(
+      valid.map((it) => ({
+        name: it.name,
+        calories: Number(it.calories) || 0,
+        protein: Number(it.protein) || 0,
+        carbs: Number(it.carbs) || 0,
+        fat: Number(it.fat) || 0,
+      }))
+    );
   };
+
   return (
     <div className="mb-6 border-2 border-stone-900 p-4 rounded-sm">
       <h2 className="text-xs uppercase tracking-widest font-semibold mb-3">Manual entry → {meal.replace('_', ' ')}</h2>
-      <div className="space-y-3">
-        <input type="text" placeholder="What did you eat?" value={entry.name} onChange={(e) => setEntry({ ...entry, name: e.target.value })} className="w-full px-3 py-2 border border-stone-300 rounded-sm focus:border-stone-900 outline-none text-sm" />
-        <div className="grid grid-cols-4 gap-2">
-          {[['calories', 'Cal'], ['protein', 'P'], ['carbs', 'C'], ['fat', 'F']].map(([key, label]) => (
-            <input key={key} type="number" placeholder={label} value={(entry as any)[key]} onChange={(e) => setEntry({ ...entry, [key]: e.target.value })} className="px-2 py-2 border border-stone-300 rounded-sm focus:border-stone-900 outline-none text-sm" />
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button onClick={submit} className="flex-1 bg-stone-900 text-stone-50 py-2 text-xs uppercase tracking-widest font-semibold">Add</button>
-          <button onClick={onCancel} className="px-4 py-2 border border-stone-900 text-xs uppercase tracking-widest font-semibold">Cancel</button>
-        </div>
+      <div className="space-y-3 mb-3">
+        {items.map((it, idx) => (
+          <div key={it.tempId} className="bg-stone-50 p-3 border border-stone-200 rounded-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <input type="text" placeholder={idx === 0 ? 'Main item' : 'Side / drink'} value={it.name} onChange={(e) => update(it.tempId, 'name', e.target.value)} className="flex-1 px-2 py-1.5 border border-stone-300 rounded-sm focus:border-stone-900 outline-none text-sm" />
+              {items.length > 1 && (
+                <button onClick={() => removeRow(it.tempId)} className="text-stone-400 hover:text-red-600">
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[['calories', 'Cal'], ['protein', 'P'], ['carbs', 'C'], ['fat', 'F']].map(([key, label]) => (
+                <input key={key} type="number" placeholder={label} value={(it as any)[key]} onChange={(e) => update(it.tempId, key, e.target.value)} className="px-2 py-1.5 border border-stone-300 rounded-sm focus:border-stone-900 outline-none text-sm" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={addRow} className="w-full mb-3 py-2 border border-dashed border-stone-400 text-stone-600 text-xs uppercase tracking-widest font-semibold rounded-sm hover:border-stone-900 hover:text-stone-900 flex items-center justify-center gap-2">
+        <Plus size={14} /> Add side / drink
+      </button>
+      <div className="flex gap-2">
+        <button onClick={submit} disabled={valid.length === 0} className="flex-1 bg-stone-900 text-stone-50 py-2 text-xs uppercase tracking-widest font-semibold disabled:opacity-40">
+          Add{valid.length > 0 ? ` ${valid.length}` : ''}
+        </button>
+        <button onClick={onCancel} className="px-4 py-2 border border-stone-900 text-xs uppercase tracking-widest font-semibold">Cancel</button>
       </div>
     </div>
   );

@@ -13,10 +13,27 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { image, mediaType, type } = await request.json();
+    const { image, mediaType, type, query } = await request.json();
 
     let prompt = '';
-    if (type === 'food') {
+    if (type === 'search') {
+      prompt = `A user typed a description of food or drink they consumed: "${query}".
+Estimate the nutrition for what they described.
+
+Method:
+1. If they name a restaurant or packaged brand (e.g. McDonald's, Chipotle, a labeled product), use that brand's known published nutrition for the size described.
+2. If a quantity or size is given, use it. If not, assume one typical serving and reflect that in the item name.
+3. Treat distinct foods as separate items (e.g. "burger and fries" → two items).
+4. Be realistic; err slightly high on calorie-dense items (oils, cheese, bread, nut butters, dressings, sauces).
+5. Keep each item internally consistent: calories should be approximately 4*protein + 4*carbs + 9*fat (within ~15%).
+
+Round protein, carbs, and fat to whole grams, and calories to the nearest 5. In each item's name, include the brand and size when known.
+
+Respond with ONLY a JSON object — no prose, no markdown fences:
+{"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number}]}
+
+If the text does not describe any food or drink, respond exactly with: {"items":[]}`;
+    } else if (type === 'food') {
       prompt = `You are a careful nutrition estimator. Identify every distinct food and drink item in this image and estimate the nutrition for the portion ACTUALLY visible.
 
 Method:
@@ -49,19 +66,20 @@ If you can't identify a workout: {"type": "Unknown", "duration_minutes": 0, "cal
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
+    // Text search has no image; photo/workout types include the image.
+    const content: any[] =
+      type === 'search'
+        ? [{ type: 'text', text: prompt }]
+        : [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
+            { type: 'text', text: prompt },
+          ];
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-            { type: 'text', text: prompt },
-          ],
-        },
-      ],
+      messages: [{ role: 'user', content }],
     });
 
     const textBlock = message.content.find(b => b.type === 'text');
@@ -88,7 +106,7 @@ If you can't identify a workout: {"type": "Unknown", "duration_minutes": 0, "cal
 
     // Calorie sanity check for food: snap calories to the 4/4/9 macro total
     // when the model's stated calories diverge by more than 25%.
-    if (type === 'food' && Array.isArray(parsed.items)) {
+    if ((type === 'food' || type === 'search') && Array.isArray(parsed.items)) {
       parsed.items = parsed.items.map((it: any) => {
         const p = Number(it.protein) || 0;
         const c = Number(it.carbs) || 0;
