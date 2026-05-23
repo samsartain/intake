@@ -10,5 +10,9 @@ export default async function Home() {
     redirect('/login');
   }
 
-  return <IntakeApp userEmail={user.email || ''} />;
+  const meta = (user.user_metadata ?? {}) as Record<string, any>;
+  const fullName: string = meta.full_name || meta.name || meta.given_name || '';
+  const firstName = fullName.trim().split(/\s+/)[0] || '';
+
+  return <IntakeApp userEmail={user.email || ''} userName={firstName} />;
 }

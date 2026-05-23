@@ -15,7 +15,7 @@ import type { Settings, FoodEntry, WeightLog, Workout } from '@/lib/storage';
 
 type View = 'today' | 'history' | 'workout' | 'settings';
 
-export default function IntakeApp({ userEmail }: { userEmail: string }) {
+export default function IntakeApp({ userEmail, userName = '' }: { userEmail: string; userName?: string }) {
   const [view, setView] = useState<View>('today');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -24,6 +24,7 @@ export default function IntakeApp({ userEmail }: { userEmail: string }) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [welcome, setWelcome] = useState<'back' | 'new' | null>(null);
 
   useEffect(() => {
     init();
@@ -33,6 +34,12 @@ export default function IntakeApp({ userEmail }: { userEmail: string }) {
     if (settings) loadDay(currentDate);
   }, [currentDate, settings]);
 
+  useEffect(() => {
+    if (!welcome) return;
+    const t = setTimeout(() => setWelcome(null), 2200);
+    return () => clearTimeout(t);
+  }, [welcome]);
+
   const init = async () => {
     setLoading(true);
     const s = await storage.getSettings();
@@ -40,6 +47,7 @@ export default function IntakeApp({ userEmail }: { userEmail: string }) {
       setShowOnboarding(true);
     } else {
       setSettings(s);
+      setWelcome('back');
     }
     setLoading(false);
   };
@@ -80,6 +88,7 @@ export default function IntakeApp({ userEmail }: { userEmail: string }) {
         onComplete={async (s) => {
           await saveSettings(s);
           setShowOnboarding(false);
+          setWelcome('new');
         }}
       />
     );
@@ -111,6 +120,25 @@ export default function IntakeApp({ userEmail }: { userEmail: string }) {
       )}
 
       <BottomNav view={view} setView={setView} />
+
+      {welcome && <WelcomeSplash name={userName} mode={welcome} />}
+    </div>
+  );
+}
+
+function WelcomeSplash({ name, mode }: { name: string; mode: 'back' | 'new' }) {
+  const greeting =
+    mode === 'back'
+      ? name ? `Welcome back, ${name}` : 'Welcome back'
+      : name ? `Welcome, ${name}!` : 'Welcome!';
+  return (
+    <div className="fixed inset-0 z-[60] bg-stone-50 flex items-center justify-center px-5 welcome-overlay">
+      <div className="text-center">
+        <h1 className="display-font text-4xl sm:text-5xl font-extrabold tracking-tight text-stone-900 stagger-1">
+          {greeting}
+        </h1>
+        <p className="text-xs uppercase tracking-widest text-stone-500 mt-3 stagger-2">set. track. achieve.</p>
+      </div>
     </div>
   );
 }

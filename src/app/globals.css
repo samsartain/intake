@@ -78,3 +78,14 @@ input[type=number] {
   transform-origin: left center;
   animation: barFill 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+@keyframes welcomeInOut {
+  0% { opacity: 0; }
+  14% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.welcome-overlay {
+  animation: welcomeInOut 2.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
