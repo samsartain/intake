@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: #fafaf9;
+}
+
+.display-font {
+  font-family: 'Fraunces', serif;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes barFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.slide-forward {
+  animation: slideInFromRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.slide-back {
+  animation: slideInFromLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-1 {
+  animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.stagger-2 {
+  animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+}
+
+.stagger-3 {
+  animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+
+.progress-fill {
+  transform-origin: left center;
+  animation: barFill 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
